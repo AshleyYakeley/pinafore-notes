@@ -1,2 +1,27 @@
 #!/usr/bin/env pinafore
-pure ()
+let
+import "media" end;
+
+opentype World;
+world = cell.Store @World !"pinafore-notes.world" ?store;
+
+dynamictype Item;
+items = property @Item @World !"pinafore-notes.Item-World" ?store !@ world;
+
+dynamictype Note = !"pinafore-notes.Note";
+subtype Note <: Item;
+newNote: Action Note =
+    do
+        item <- new.DynamicEntity @Note;
+        items += item;
+        pure item;
+    end;
+content = property @Note @CommonMarkText !"pinafore-notes.content" ?store;
+
+in
+openDefault.Store >>= fn store =>
+imply ?store = store in
+do
+    w <- get world;
+    outputLn.Env $ anchor.Entity w;
+end
