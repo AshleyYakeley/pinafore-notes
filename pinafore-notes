@@ -6,22 +6,105 @@ opentype World;
 world = cell.Store @World !"pinafore-notes.world" ?store;
 
 dynamictype Item;
-items = property @Item @World !"pinafore-notes.Item-World" ?store !@ world;
+items: FiniteSetModel DynamicEntity =
+    property @DynamicEntity @World !"pinafore-notes.Item-World" ?store !@ world;
+
+nameOf: Property Item Text =
+    property @Item @Text !"pinafore-notes.name" ?store;
 
 dynamictype Note = !"pinafore-notes.Note";
 subtype Note <: Item;
+
+notes: FiniteSetModel Note = dynamic.Prism @Note !$$ items;
+content = property @Note @CommonMarkText !"pinafore-notes.content" ?store;
+
 newNote: Action Note =
     do
         item <- new.DynamicEntity @Note;
         items += item;
         pure item;
     end;
-content = property @Note @CommonMarkText !"pinafore-notes.content" ?store;
+
+import "gnome", "UILib" end;
+with UILib end;
+
+notePane: Note -> Pane =
+    fn note =>
+    let
+        noteContent: WholeModel CommonMarkText =
+            content !$ {note};
+        textModel: TextModel =
+            fromWhole.TextModel $ reverse.Prism asText.CommonMarkText !$ noteContent;
+        htmlErr: Text -> HTMLText =
+            fn t => with HTMLText in tag "em" $ plain "error: " <> plain t;
+        htmlRef: WholeModel +HTMLText =
+            {from.Result htmlErr id $ toHTML.CommonMarkText %noteContent};
+    in
+    Mk.Pane of
+        titleModel = {"Note"};
+        widget = with Widget.GTK. in
+            notebook unknown.WholeModel
+            [
+                (label {"Edit"},scrolled $ textView textModel),
+                (label {"Show"},webView.WebKit htmlRef)
+            ]
+    end;
+
+datatype TableSetWidget {-p,+q} of
+    Mk of
+        order: ModelOrder p;
+        itemSet: FiniteSetModel {-p,+q};
+        columns: List (WholeModel +Text *: (p -> WholeModel +Text));
+        itemPane: p -> Pane;
+    end;
+end;
+
+subtype TableSetWidget {a,+Entity} <: SetWidget {a,-Entity} =
+    fn Mk.TableSetWidget => Mk.SetWidget $
+        fn mSelectionModel =>
+            exec.Widget.GTK $
+            do
+                itemList <- getList.FiniteSetModel order itemSet;
+                pure $ listTable.Widget.GTK. columns itemList (fn item => paneWindow.Pane $ itemPane item) mSelectionModel;
+            end;
+
+notesPresentation: SetPresentation Note =
+    Mk.SetPresentation of
+        setName = "Notes";
+        newItems =
+            [
+                Mk.NewItem of
+                    name = "New Note";
+                    mkey = Just "Ctrl+K";
+                    newItem = newNote;
+                end
+            ];
+        itemSet = notes;
+        itemPane = notePane;
+        setWidget =
+            Mk.TableSetWidget of
+                order = on.ModelOrder nameOf order.Text;
+                columns =
+                [
+                    ({"Name"},fn item => immut.WholeModel $ nameOf !$ {item})
+                ];
+                itemSet = notes;
+                itemPane = notePane;
+            end;
+    end;
 
 in
-openDefault.Store >>= fn store =>
-imply ?store = store in
+
+run.Context $ fn Mk.Context =>
+imply
+    ?store = store;
+    ?undoHandler = undoHandler;
+    ?gtk = gtk;
+in
 do
-    w <- get world;
-    outputLn.Env $ anchor.Entity w;
+    count <- get $ count.FiniteSetModel items;
+    outputLn.Env $ show count;
+    pane <- present.SetPresentation notesPresentation;
+    _ <- paneWindow.Pane pane;
+    pure ()
 end
