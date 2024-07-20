@@ -15,7 +15,7 @@ nameOf: Property Item Text =
 dynamictype Note = !"pinafore-notes.Note";
 subtype Note <: Item;
 
-notes: FiniteSetModel Note = dynamic.Prism @Note !$$ items;
+notes: FiniteSetModel Note = reverse.Prism dynamic.Prism @Note !$$ items;
 content = property @Note @CommonMarkText !"pinafore-notes.content" ?store;
 
 newNote: Action Note =
@@ -34,7 +34,7 @@ notePane: Note -> Pane =
         noteContent: WholeModel CommonMarkText =
             content !$ {note};
         textModel: TextModel =
-            fromWhole.TextModel $ reverse.Prism asText.CommonMarkText !$ noteContent;
+            fromWhole.TextModel $ asText.CommonMarkText !$ noteContent;
         htmlErr: Text -> HTMLText =
             fn t => with HTMLText in tag "em" $ plain "error: " <> plain t;
         htmlRef: WholeModel +HTMLText =
@@ -102,8 +102,6 @@ imply
     ?gtk = gtk;
 in
 do
-    count <- get $ count.FiniteSetModel items;
-    outputLn.Env $ show count;
     pane <- present.SetPresentation notesPresentation;
     _ <- paneWindow.Pane pane;
     pure ()
