@@ -2,25 +2,45 @@
 let
 import "media" end;
 
-opentype World;
-world = cell.Store @World !"pinafore-notes.world" ?store;
+entitytype World;
+world = cell.Store @World !"world.pinafore-notes" ?store;
 
-dynamictype Item;
-items: FiniteSetModel DynamicEntity =
-    property @DynamicEntity @World !"pinafore-notes.Item-World" ?store !@ world;
+entitytype ItemType;
+entitytype ItemValue;
+
+datatype storable Item of
+    Mk ItemType ItemValue !"Item.pinafore-notes";
+end;
+
+namespace Item of
+    new: ItemType -> Action Item =
+        fn t => do
+            v <- new.OpenEntity @ItemValue;
+            pure $ Mk t v;
+        end;
+    isType: ItemType -> Item -> Boolean = fn t, Mk ti _ => t == ti;
+end;
+
+items: FiniteSetModel Item =
+    property @Item @World !"Item-World.pinafore-notes" ?store !@ world;
 
 nameOf: Property Item Text =
-    property @Item @Text !"pinafore-notes.name" ?store;
+    property @Item @Text !"name.pinafore-notes" ?store;
 
-dynamictype Note = !"pinafore-notes.Note";
-subtype Note <: Item;
+namespace Note of
+    itemtype: ItemType = point.OpenEntity @ItemType !"Note.pinafore-notes";
+end;
+predicatetype storable Note <: Item = isType.Item itemtype.Note;
+namespace Note of
+    new: Action Note = map.Action (coerce @Note) $ new.Item itemtype.Note;
+end;
 
 notes: FiniteSetModel Note = reverse.Prism dynamic.Prism @Note !$$ items;
-content = property @Note @CommonMarkText !"pinafore-notes.content" ?store;
+content = property @Note @CommonMarkText !"content.pinafore-notes" ?store;
 
 newNote: Action Note =
     do
-        item <- new.DynamicEntity @Note;
+        item <- new.Note;
         items += item;
         pure item;
     end;
@@ -42,7 +62,7 @@ notePane: Note -> Pane =
     in
     Mk.Pane of
         titleModel = {"Note"};
-        widget = with Widget.GTK. in
+        contents = with Widget.GTK. in
             notebook unknown.WholeModel
             [
                 (label {"Edit"},scrolled $ textView textModel),
@@ -50,11 +70,25 @@ notePane: Note -> Pane =
             ]
     end;
 
+datatype Column -p of
+    Mk of
+        name: WholeModel +Text;
+        contents: p -> WholeModel +Text;
+    end;
+end;
+
+attributeColumn: Text -> Attribute -p +Text -> Column p =
+    fn name, prop =>
+        Mk.Column of
+            name = {name};
+            contents = fn item => immut.WholeModel $ prop !$ {item};
+        end;
+
 datatype TableSetWidget {-p,+q} of
     Mk of
         order: ModelOrder p;
         itemSet: FiniteSetModel {-p,+q};
-        columns: List (WholeModel +Text *: (p -> WholeModel +Text));
+        columns: List (Column p);
         itemPane: p -> Pane;
     end;
 end;
@@ -65,28 +99,35 @@ subtype TableSetWidget {a,+Entity} <: SetWidget {a,-Entity} =
             exec.Widget.GTK $
             do
                 itemList <- getList.FiniteSetModel order itemSet;
-                pure $ listTable.Widget.GTK. columns itemList (fn item => paneWindow.Pane $ itemPane item) mSelectionModel;
+                let
+                    columnPairs = map.List (fn Mk.Column => (name,contents)) columns;
+                end;
+                pure $ listTable.Widget.GTK. columnPairs itemList (fn item => paneWindow.Pane $ itemPane item) mSelectionModel;
             end;
+
+newNoteCommand: Command (Context.Command *: SetContext Note) =
+    Mk.Command of
+        name = "New Note";
+        defaultKeyBinding = Just "Ctrl+K";
+        action = fn (ctxt,Mk.SetContext) =>
+            do
+                note <- newNote;
+                addItem note;
+            end;
+    end;
 
 notesPresentation: SetPresentation Note =
     Mk.SetPresentation of
         setName = "Notes";
-        newItems =
-            [
-                Mk.NewItem of
-                    name = "New Note";
-                    mkey = Just "Ctrl+K";
-                    newItem = newNote;
-                end
-            ];
         itemSet = notes;
+        menuEntries = [newNoteCommand];
         itemPane = notePane;
         setWidget =
             Mk.TableSetWidget of
                 order = on.ModelOrder nameOf order.Text;
                 columns =
                 [
-                    ({"Name"},fn item => immut.WholeModel $ nameOf !$ {item})
+                    attributeColumn "Name" nameOf
                 ];
                 itemSet = notes;
                 itemPane = notePane;
