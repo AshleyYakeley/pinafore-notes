@@ -5,43 +5,49 @@ import "media" end;
 entitytype World;
 world = cell.Store @World !"world.pinafore-notes" ?store;
 
-entitytype ItemType;
-entitytype ItemValue;
+let
+    namespace Item of
+        entitytype Type;
+        entitytype Value;
+    end;
 
-datatype storable Item of
-    Mk ItemType ItemValue !"Item.pinafore-notes";
-end;
+    datatype storable Item of
+        Mk Type.Item Value.Item !"Item.pinafore-notes";
+    end;
+
+    namespace Item of
+        new: Type.Item -> Action Item =
+            fn t => do
+                v <- new.OpenEntity @Value.Item;
+                pure $ Mk t v;
+            end;
+        isType: Type.Item -> Item -> Boolean = fn t, Mk ti _ => t == ti;
+    end;
+in expose Item, Type.Item, new.Item, isType.Item;
 
 namespace Item of
-    new: ItemType -> Action Item =
-        fn t => do
-            v <- new.OpenEntity @ItemValue;
-            pure $ Mk t v;
-        end;
-    isType: ItemType -> Item -> Boolean = fn t, Mk ti _ => t == ti;
+    all: FiniteSetModel Item =
+        property @Item @World !"Item-World.pinafore-notes" ?store !@ world;
 end;
-
-items: FiniteSetModel Item =
-    property @Item @World !"Item-World.pinafore-notes" ?store !@ world;
 
 nameOf: Property Item Text =
     property @Item @Text !"name.pinafore-notes" ?store;
 
 namespace Note of
-    itemtype: ItemType = point.OpenEntity @ItemType !"Note.pinafore-notes";
+    itemtype: Type.Item = point.OpenEntity @Type.Item !"Note.pinafore-notes";
 end;
 predicatetype storable Note <: Item = isType.Item itemtype.Note;
 namespace Note of
     new: Action Note = map.Action (coerce @Note) $ new.Item itemtype.Note;
+    all: FiniteSetModel Note = reverse.Prism dynamic.Prism @Note !$$ all.Item;
 end;
 
-notes: FiniteSetModel Note = reverse.Prism dynamic.Prism @Note !$$ items;
 content = property @Note @CommonMarkText !"content.pinafore-notes" ?store;
 
 newNote: Action Note =
     do
         item <- new.Note;
-        items += item;
+        all.Item += item;
         pure item;
     end;
 
@@ -119,7 +125,7 @@ newNoteCommand: Command (Context.Command *: SetContext Note) =
 notesPresentation: SetPresentation Note =
     Mk.SetPresentation of
         setName = "Notes";
-        itemSet = notes;
+        itemSet = all.Note;
         menuEntries = [newNoteCommand];
         itemPane = notePane;
         setWidget =
@@ -129,7 +135,7 @@ notesPresentation: SetPresentation Note =
                 [
                     attributeColumn "Name" nameOf
                 ];
-                itemSet = notes;
+                itemSet = all.Note;
                 itemPane = notePane;
             end;
     end;
