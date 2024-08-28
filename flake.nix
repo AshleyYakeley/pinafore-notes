@@ -47,6 +47,5 @@
         '';
       formatter.x86_64-linux = packages.nixpkgs-fmt;
       checks.x86_64-linux.interpret = packages.runCommand "check" { } "${app} -n ${pinafore-notes} > $out";
-      testapp = app;
     };
 }
