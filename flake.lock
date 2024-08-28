@@ -688,11 +688,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1724213515,
-        "narHash": "sha256-7OzrFceJhfRoydZPGxMzcW2dM8Bzwu5+4+M3A0M8w2k=",
+        "lastModified": 1724876280,
+        "narHash": "sha256-Hhs2zDFvmAMpMBQ6FElBsFid4UAWxbNn3r/fauo5ax0=",
         "ref": "master",
-        "rev": "3557d728abc7c332d08779a1799a0bdd71a80e85",
-        "revCount": 2790,
+        "rev": "990332b7d345a89687456cf2d9acda2a12839700",
+        "revCount": 2796,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/AshleyYakeley/Truth"

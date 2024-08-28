@@ -27,9 +27,10 @@
           system = "x86_64-linux";
           config.allowUnfree = true;
         };
-      pinafore-notes = packages.runCommand "pinafore-notes" { }
+      app = pinafore.apps.x86_64-linux.pinafore.program;
+      pinafore-notes = packages.runCommandLocal "pinafore-notes" { }
         ''
-          sed -e "1s|.*|\#\!${pinafore.packages.x86_64-linux.pinafore}/bin/pinafore|" ${./pinafore-notes} > $out
+          sed -e "1s|.*|\#\!${app}|" ${./pinafore-notes} > $out
           chmod 755 $out
         '';
     in
@@ -45,5 +46,7 @@
           ln -s ${pinafore-notes} $out/bin/pinafore-notes
         '';
       formatter.x86_64-linux = packages.nixpkgs-fmt;
+      checks.x86_64-linux.interpret = packages.runCommand "check" { } "${app} -n ${pinafore-notes} > $out";
+      testapp = app;
     };
 }
