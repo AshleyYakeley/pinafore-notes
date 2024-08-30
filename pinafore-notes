@@ -69,10 +69,14 @@ notePane: Note -> Pane =
     Mk.Pane of
         titleModel = {"Note"};
         contents = with Widget.GTK. in
-            notebook unknown.WholeModel
+            vertical
             [
-                (label {"View"},webView.WebKit htmlRef),
-                (label {"Edit"},scrolled $ textView textModel)
+                textEntry $ nameOf !$ {note},
+                layoutGrow $ notebook unknown.WholeModel
+                [
+                    (label {"View"},webView.WebKit htmlRef),
+                    (label {"Edit"},scrolled $ textView textModel)
+                ]
             ]
     end;
 
