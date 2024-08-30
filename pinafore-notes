@@ -39,7 +39,7 @@ end;
 predicatetype storable Note <: Item = isType.Item itemtype.Note;
 namespace Note of
     new: Action Note = map.Action (coerce @Note) $ new.Item itemtype.Note;
-    all: FiniteSetModel Note = reverse.Prism dynamic.Prism @Note !$$ all.Item;
+    all: FiniteSetModel Note = dynamic.Prism @Note !$$ all.Item;
 end;
 
 content = property @Note @CommonMarkText !"content.pinafore-notes" ?store;
@@ -71,8 +71,8 @@ notePane: Note -> Pane =
         contents = with Widget.GTK. in
             notebook unknown.WholeModel
             [
-                (label {"Edit"},scrolled $ textView textModel),
-                (label {"Show"},webView.WebKit htmlRef)
+                (label {"View"},webView.WebKit htmlRef),
+                (label {"Edit"},scrolled $ textView textModel)
             ]
     end;
 
@@ -126,7 +126,7 @@ notesPresentation: SetPresentation Note =
     Mk.SetPresentation of
         setName = "Notes";
         itemSet = all.Note;
-        menuEntries = [newNoteCommand];
+        menuEntries = [newNoteCommand,deleteCommand];
         itemPane = notePane;
         setWidget =
             Mk.TableSetWidget of
