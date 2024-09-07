@@ -128,10 +128,7 @@ let
                 do
                 {
                     itemList <- getList.FiniteSetModel order itemSet;
-                    let
-                    {
-                        columnPairs = map.List (fn Mk.Column => (name,contents)) columns;
-                    };
+                    columnPairs = map.List (fn Mk.Column => (name,contents)) columns;
                     pure $ listTable.Widget.GTK. columnPairs itemList (fn item => paneWindow.Pane $ itemPane item) mSelectionModel;
                 };
 
