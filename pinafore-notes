@@ -109,9 +109,7 @@ subtype TableSetWidget {a,+Entity} <: SetWidget {a,-Entity} =
             exec.Widget.GTK $
             do
                 itemList <- getList.FiniteSetModel order itemSet;
-                let
-                    columnPairs = map.List (fn Mk.Column => (name,contents)) columns;
-                end;
+                columnPairs = map.List (fn Mk.Column => (name,contents)) columns;
                 pure $ listTable.Widget.GTK. columnPairs itemList (fn item => paneWindow.Pane $ itemPane item) mSelectionModel;
             end;
 
