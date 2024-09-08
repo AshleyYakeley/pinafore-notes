@@ -70,25 +70,25 @@ let
         let
         {
             noteContent: WholeModel CommonMarkText =
-                content !$ ap {note};
+                content !$ ap{note};
             textModel: TextModel =
                 fromWhole.TextModel $ asText.CommonMarkText !$ noteContent;
             htmlErr: Text -> HTMLText =
                 fn t => with HTMLText tag "em" $ plain "error: " <> plain t;
             htmlRef: WholeModel +HTMLText =
-                ap {from.Result htmlErr id $ toHTML.CommonMarkText %noteContent};
+                ap{from.Result htmlErr id $ toHTML.CommonMarkText %noteContent};
         }
         Mk.Pane
         {
-            titleModel = ap {"Note"};
+            titleModel = ap{"Note"};
             contents = with Widget.GTK.
                 vertical
                 [
                     textEntry $ nameOf !$ {note},
                     layoutGrow $ notebook unknown.WholeModel
                     [
-                        (label ap {"View"},webView.WebKit htmlRef),
-                        (label ap {"Edit"},scrolled $ textView textModel)
+                        (label ap{"View"},webView.WebKit htmlRef),
+                        (label ap{"Edit"},scrolled $ textView textModel)
                     ]
                 ];
         };
@@ -106,7 +106,7 @@ let
         fn name, prop =>
             Mk.Column
             {
-                name = ap {name};
+                name = ap{name};
                 contents = fn item => immut.WholeModel $ prop !$ {item};
             };
 
