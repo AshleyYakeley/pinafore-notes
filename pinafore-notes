@@ -164,9 +164,7 @@ let
                     itemPane = notePane;
                 };
         };
-
 }
-
 run.Context $ fn Mk.Context =>
 imply
 {
