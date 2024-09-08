@@ -1,39 +1,31 @@
 #!/usr/bin/env pinafore
-let
-{
+let {
     import "media";
 
     entitytype World;
     world = cell.Store @World !"world.pinafore-notes" ?store;
 
-    let
-    {
-        namespace Item
-        {
+    let {
+        namespace Item {
             entitytype Type;
             entitytype Value;
         };
 
-        datatype storable Item
-        {
+        datatype storable Item {
             Mk Type.Item Value.Item !"Item.pinafore-notes";
         };
 
-        namespace Item
-        {
+        namespace Item {
             new: Type.Item -> Action Item =
-                fn t => do
-                {
+                fn t => do {
                     v <- new.OpenEntity @Value.Item;
                     pure $ Mk t v;
                 };
             isType: Type.Item -> Item -> Boolean = fn t, Mk ti _ => t == ti;
         };
-    }
-    expose Item, Type.Item, new.Item, isType.Item;
+    } expose Item, Type.Item, new.Item, isType.Item;
 
-    namespace Item
-    {
+    namespace Item {
         all: FiniteSetModel Item =
             property @Item @World !"Item-World.pinafore-notes" ?store !@ world;
     };
@@ -41,13 +33,11 @@ let
     nameOf: Property Item Text =
         property @Item @Text !"name.pinafore-notes" ?store;
 
-    namespace Note
-    {
+    namespace Note {
         itemtype: Type.Item = point.OpenEntity @Type.Item !"Note.pinafore-notes";
     };
     predicatetype storable Note <: Item = isType.Item itemtype.Note;
-    namespace Note
-    {
+    namespace Note {
         new: Action Note = map.Action (coerce @Note) $ new.Item itemtype.Note;
         all: FiniteSetModel Note = dynamic.Prism @Note !$$ all.Item;
     };
@@ -55,8 +45,7 @@ let
     content = property @Note @CommonMarkText !"content.pinafore-notes" ?store;
 
     newNote: Action Note =
-        do
-        {
+        do {
             item <- new.Note;
             all.Item += item;
             pure item;
@@ -67,8 +56,7 @@ let
 
     notePane: Note -> Pane =
         fn note =>
-        let
-        {
+        let {
             noteContent: WholeModel CommonMarkText =
                 content !$ ap{note};
             textModel: TextModel =
@@ -77,26 +65,20 @@ let
                 fn t => with HTMLText tag "em" $ plain "error: " <> plain t;
             htmlRef: WholeModel +HTMLText =
                 ap{from.Result htmlErr id $ toHTML.CommonMarkText %noteContent};
-        }
-        Mk.Pane
-        {
+        } Mk.Pane {
             titleModel = ap{"Note"};
             contents = with Widget.GTK.
-                vertical
-                [
+                vertical [
                     textEntry $ nameOf !$ {note},
-                    layoutGrow $ notebook unknown.WholeModel
-                    [
+                    layoutGrow $ notebook unknown.WholeModel [
                         (label ap{"View"},webView.WebKit htmlRef),
                         (label ap{"Edit"},scrolled $ textView textModel)
                     ]
                 ];
         };
 
-    datatype Column -p
-    {
-        Mk
-        {
+    datatype Column -p {
+        Mk {
             name: WholeModel +Text;
             contents: p -> WholeModel +Text;
         };
@@ -104,16 +86,13 @@ let
 
     attributeColumn: Text -> Attribute -p +Text -> Column p =
         fn name, prop =>
-            Mk.Column
-            {
+            Mk.Column {
                 name = ap{name};
                 contents = fn item => immut.WholeModel $ prop !$ {item};
             };
 
-    datatype TableSetWidget t
-    {
-        Mk
-        {
+    datatype TableSetWidget t {
+        Mk {
             order: ModelOrder t;
             itemSet: FiniteSetModel t;
             columns: List (Column t);
@@ -125,55 +104,45 @@ let
         fn Mk.TableSetWidget => Mk.SetWidget $
             fn mSelectionModel =>
                 exec.Widget.GTK $
-                do
-                {
+                do {
                     itemList <- getList.FiniteSetModel order itemSet;
                     columnPairs = map.List (fn Mk.Column => (name,contents)) columns;
                     pure $ listTable.Widget.GTK. columnPairs itemList (fn item => paneWindow.Pane $ itemPane item) mSelectionModel;
                 };
 
     newNoteCommand: Command (Context.Command *: SetContext Note) =
-        Mk.Command
-        {
+        Mk.Command {
             name = "New Note";
             defaultKeyBinding = Just "Ctrl+K";
             action = fn (ctxt,Mk.SetContext) =>
-                do
-                {
+                do {
                     note <- newNote;
                     addItem note;
                 };
         };
 
     notesPresentation: SetPresentation Note =
-        Mk.SetPresentation
-        {
+        Mk.SetPresentation {
             setName = "Notes";
             itemSet = all.Note;
             menuEntries = [newNoteCommand,deleteCommand];
             itemPane = notePane;
             setWidget =
-                Mk.TableSetWidget
-                {
+                Mk.TableSetWidget {
                     order = on.ModelOrder nameOf order.Text;
-                    columns =
-                    [
+                    columns = [
                         attributeColumn "Name" nameOf
                     ];
                     itemSet = all.Note;
                     itemPane = notePane;
                 };
         };
-}
-run.Context $ fn Mk.Context =>
-imply
-{
+} run.Context $ fn Mk.Context =>
+imply {
     ?store = store;
     ?undoHandler = undoHandler;
     ?gtk = gtk;
-}
-do
-{
+} do {
     pane <- present.SetPresentation notesPresentation;
     _ <- paneWindow.Pane pane;
     pure ();
