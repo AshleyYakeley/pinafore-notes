@@ -40,6 +40,11 @@
           type = "app";
           program = "${pinafore-notes}";
         };
+      apps.x86_64-linux.pinafore =
+        {
+          type = "app";
+          program = "${app}";
+        };
       packages.x86_64-linux.default = packages.runCommand "pinafore-notes" { }
         ''
           mkdir -p $out/bin
