@@ -11,3 +11,6 @@ format:
 
 check: format
     nix flake check
+
+run:
+    nix run

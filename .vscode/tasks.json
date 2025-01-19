@@ -11,12 +11,21 @@
     "tasks": [
         {
             "group": {
-                "kind": "build",
+                "kind": "test",
                 "isDefault": true
             },
             "label": "Format & Check",
             "type": "shell",
             "command": "just check"
+        },
+        {
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "label": "Run",
+            "type": "shell",
+            "command": "just run"
         }
     ]
 }
