@@ -1,3 +1,0 @@
-#!/usr/bin/env -S bash -e
-nix flake lock --update-input pinafore
-nix build

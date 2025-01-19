@@ -16,7 +16,7 @@
             },
             "label": "Format & Check",
             "type": "shell",
-            "command": "nix fmt && nix flake check && echo Done!"
+            "command": "just check"
         }
     ]
 }
