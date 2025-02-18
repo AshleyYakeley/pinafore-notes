@@ -28,29 +28,26 @@
           config.allowUnfree = true;
         };
       app = pinafore.apps.x86_64-linux.pinafore.program;
-      pinafore-notes = packages.runCommandLocal "pinafore-notes" { }
+      src = ./src;
+      package = packages.writeScriptBin "pinafore-notes"
         ''
-          sed -e "1s|.*|\#\!${app}|" ${./pinafore-notes} > $out
-          chmod 755 $out
+          #!${packages.stdenv.shell}
+          ${app} -I ${src} ${src}/pinafore-notes
         '';
     in
     {
       apps.x86_64-linux.default =
         {
           type = "app";
-          program = "${pinafore-notes}";
+          program = "${package}/bin/pinafore-notes";
         };
       apps.x86_64-linux.pinafore =
         {
           type = "app";
           program = "${app}";
         };
-      packages.x86_64-linux.default = packages.runCommand "pinafore-notes" { }
-        ''
-          mkdir -p $out/bin
-          ln -s ${pinafore-notes} $out/bin/pinafore-notes
-        '';
+      packages.x86_64-linux.default = package;
       formatter.x86_64-linux = packages.nixpkgs-fmt;
-      checks.x86_64-linux.interpret = packages.runCommand "check" { } "${app} -n ${pinafore-notes} > $out";
+      checks.x86_64-linux.interpret = packages.runCommand "check" { } "${app} -I ${src} -n ${src}/pinafore-notes > $out";
     };
 }
