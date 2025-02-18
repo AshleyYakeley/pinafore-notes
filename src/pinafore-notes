@@ -1,9 +1,8 @@
 #!/usr/bin/env pinafore
 let {
-    import "media";
+    import "notes/World";
 
-    entitytype World;
-    world = !{cell.Store @World !"world.pinafore-notes"} ?store;
+    import "media";
 
     let {
         namespace Item {

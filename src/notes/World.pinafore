@@ -1,0 +1,4 @@
+let {
+    entitytype World;
+    world = !{cell.Store @World !"world.pinafore-notes"} ?store;
+}
