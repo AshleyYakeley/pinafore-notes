@@ -1,54 +1,11 @@
 #!/usr/bin/env pinafore
 let {
     import "notes/World";
+    import "notes/Item";
+    import "notes/Note";
 
     import "media";
 
-    let {
-        namespace Item {
-            entitytype Type;
-            entitytype Value;
-        };
-
-        datatype storable Item {
-            Mk Type.Item Value.Item !"Item.pinafore-notes";
-        };
-
-        namespace Item {
-            new: Type.Item -> Action Item =
-                fn t => do {
-                    v <- !{new.OpenEntity @Value.Item};
-                    pure $ Mk t v;
-                };
-            isType: Type.Item -> Item -> Boolean = fn t, Mk ti _ => t == ti;
-        };
-    } expose Item, Type.Item, new.Item, isType.Item;
-
-    namespace Item {
-        all: FiniteSetModel Item =
-            !{property @Item @World !"Item-World.pinafore-notes"} ?store !@ world;
-    };
-
-    nameOf: Property Item Text =
-        !{property @Item @Text !"name.pinafore-notes"} ?store;
-
-    namespace Note {
-        itemtype: Type.Item = !{point.OpenEntity @Type.Item !"Note.pinafore-notes"};
-    };
-    predicatetype storable Note <: Item = isType.Item itemtype.Note;
-    namespace Note {
-        new: Action Note = map.Action !{coerce @Note} $ new.Item itemtype.Note;
-        all: FiniteSetModel Note = !{dynamic.Prism @Note} !$$ all.Item;
-    };
-
-    content = !{property @Note @CommonMarkText !"content.pinafore-notes"} ?store;
-
-    newNote: Action Note =
-        do {
-            item <- new.Note;
-            all.Item += item;
-            pure item;
-        };
 
     import "gnome", "UILib";
     with UILib;

@@ -1,0 +1,21 @@
+let {
+    import "notes/Item";
+    import "media";
+    namespace Note {
+        itemtype: Type.Item = !{point.OpenEntity @Type.Item !"Note.pinafore-notes"};
+    };
+    predicatetype storable Note <: Item = isType.Item itemtype.Note;
+    namespace Note {
+        new: Action Note = map.Action !{coerce @Note} $ new.Item itemtype.Note;
+        all: FiniteSetModel Note = !{dynamic.Prism @Note} !$$ all.Item;
+    };
+
+    content = !{property @Note @CommonMarkText !"content.pinafore-notes"} ?store;
+
+    newNote: Action Note =
+        do {
+            item <- new.Note;
+            all.Item += item;
+            pure item;
+        };
+}
