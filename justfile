@@ -1,16 +1,18 @@
 default: check
 
+nixopts := ""
+
 update:
-    nix flake update
+    nix {{nixopts}} flake update
 
 build:
-    nix build
+    nix {{nixopts}} build
 
 format:
-    nix fmt
+    nix {{nixopts}} fmt
 
 check: format
-    nix flake check
+    nix {{nixopts}} flake check
 
 run:
-    nix run
+    nix {{nixopts}} run
