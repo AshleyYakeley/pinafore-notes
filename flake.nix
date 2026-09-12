@@ -49,5 +49,6 @@
       packages.x86_64-linux.default = package;
       formatter.x86_64-linux = packages.nixpkgs-fmt;
       checks.x86_64-linux.interpret = packages.runCommand "check" { } "${app} -I ${src} -n ${src}/pinafore-notes > $out";
+      devShells.x86_64-linux.default = packages.mkShell { buildInputs = with packages; [ just ]; };
     };
 }
