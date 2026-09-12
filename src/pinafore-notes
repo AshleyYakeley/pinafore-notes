@@ -12,25 +12,55 @@ let {
 
     notePane: Note -> Pane =
         fn note =>
-        let {
-            noteContent: WholeModel CommonMarkText =
-                content !$ ap{note};
-            textModel: TextModel =
-                fromWhole.TextModel $ asText.CommonMarkText !$ noteContent;
-            htmlErr: Showable -> HTMLText =
-                fn err => with HTMLText tag "em" $ plain "error: " <> plain (show err);
-            htmlRef: WholeModel +HTMLText =
-                ap{from.Result htmlErr id $ toHTML.CommonMarkText %noteContent};
-        } Mk.Pane {
+        Mk.Pane {
             titleModel = ap{"Note"};
-            contents = with Widget.GTK.
-                vertical [
-                    textEntry $ nameOf !$ ap{note},
-                    grow.Layout $ notebook unknown.WholeModel [
-                        (label ap{"View"},webView.WebKit htmlRef),
-                        (label ap{"Edit"},scrolled $ textView textModel)
-                    ]
-                ];
+            contents =
+                with Widget.GTK.
+                exec $
+                do {
+                    noteContent: WholeModel CommonMarkText =
+                        debounceUpdates.WholeModel (Seconds 0.2) $
+                        content !$ ap{note};
+                    textModel: TextModel =
+                        fromWhole.TextModel $ asText.CommonMarkText !$ noteContent;
+                    htmlErr: Showable -> HTMLText =
+                        fn err => with HTMLText tag "em" $ plain "error: " <> plain (show err);
+                    catchShowErr: Action a -> Action (a | WholeModel +HTMLText) =
+                        fn action =>
+                        catch action $
+                        fn exc =>
+                        pure $
+                        pure.WholeModel $
+                        htmlErr exc;
+                    mkModel: Text -> Action (WholeModel HTMLText) =
+                        fn text =>
+                        with Pinafore. catchShowErr $
+                        do {
+                            ramodel <- run.Interpreter !{this.Context} $ do.Interpreter {
+                                media <- interpret.Scope "import \"media\"";
+                                apply.Scope media $ do.Interpreter {
+                                    val <- interpret.Value text;
+                                    unify.Value !{this.Scope} @(Action (WholeModel HTMLText)) val;
+                                }
+                            };
+                            amodel <- ramodel;
+                            model <- amodel;
+                            pure model;
+                        };
+                    htmlRefRef <-
+                        runEachHere.WholeModel $
+                        ap{catchShowErr $ toHTMLModel.CommonMarkText mkModel %noteContent};
+                    htmlRef =
+                        dynamic.WholeModel htmlRefRef;
+                    pure $
+                    vertical [
+                        textEntry $ nameOf !$ ap{note},
+                        grow.Layout $ notebook unknown.WholeModel [
+                            (label ap{"View"},webView.WebKit htmlRef),
+                            (label ap{"Edit"},scrolled $ textView textModel)
+                        ]
+                    ];
+                };
         };
 
     datatype Column -p {
