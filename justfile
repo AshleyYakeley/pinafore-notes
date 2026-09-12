@@ -9,7 +9,7 @@ build:
     nix {{nixopts}} build
 
 format:
-    nix {{nixopts}} fmt
+    shopt -s globstar && nix {{nixopts}} fmt *.nix
 
 check: format
     nix {{nixopts}} flake check
