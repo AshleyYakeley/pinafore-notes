@@ -3,11 +3,7 @@ let {
     import "notes/World";
     import "notes/Item";
     import "notes/Note";
-
-    import "media";
-
-
-    import "gnome", "UILib";
+    import "media", "gnome", "UILib";
     with UILib;
 
     notePane: Note -> Pane =
