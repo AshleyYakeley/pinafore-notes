@@ -4,59 +4,84 @@ let {
     import "notes/Item";
     import "notes/Note";
     import "media", "gnome", "UILib";
-    with UILib;
+    with GTK.;
+    with UILib.;
+    with Item.;
+
+    stdPane: (a -> Widget) -> (Item & a) -> Pane =
+        fn getContents, item =>
+        Mk.Pane {
+            titleModel = nameOf !$ ap{item};
+            contents = getContents item;
+        };
 
     notePane: Note -> Pane =
+        stdPane $
         fn note =>
-        Mk.Pane {
-            titleModel = ap{"Note"};
-            contents =
-                with Widget.GTK.
-                exec $
+        with Widget
+        withContext $ fn context =>
+        exec $
+        do {
+            noteContent: WholeModel CommonMarkText =
+                debounceUpdates.WholeModel (Seconds 0.2) $
+                content !$ ap{note};
+            textModel: TextModel =
+                fromWhole.TextModel $ asText.CommonMarkText !$ noteContent;
+            htmlErr: Showable -> HTMLText =
+                fn err => with HTMLText tag "em" $ plain "error: " <> plain (show err);
+            catchShowErr: Action a -> Action (a | WholeModel +HTMLText) =
+                fn action =>
+                catch action $
+                fn exc =>
+                pure $
+                pure.WholeModel $
+                htmlErr exc;
+            mkModel: Text -> Action (WholeModel HTMLText) =
+                fn text =>
+                with Pinafore. catchShowErr $
                 do {
-                    noteContent: WholeModel CommonMarkText =
-                        debounceUpdates.WholeModel (Seconds 0.2) $
-                        content !$ ap{note};
-                    textModel: TextModel =
-                        fromWhole.TextModel $ asText.CommonMarkText !$ noteContent;
-                    htmlErr: Showable -> HTMLText =
-                        fn err => with HTMLText tag "em" $ plain "error: " <> plain (show err);
-                    catchShowErr: Action a -> Action (a | WholeModel +HTMLText) =
-                        fn action =>
-                        catch action $
-                        fn exc =>
-                        pure $
-                        pure.WholeModel $
-                        htmlErr exc;
-                    mkModel: Text -> Action (WholeModel HTMLText) =
-                        fn text =>
-                        with Pinafore. catchShowErr $
-                        do {
-                            ramodel <- run.Interpreter !{this.Context} $ do.Interpreter {
-                                media <- interpret.Scope "import \"media\"";
-                                apply.Scope media $ do.Interpreter {
-                                    val <- interpret.Value text;
-                                    unify.Value !{this.Scope} @(Action (WholeModel HTMLText)) val;
-                                }
-                            };
-                            amodel <- ramodel;
-                            model <- amodel;
-                            pure model;
-                        };
-                    htmlRefRef <-
-                        runEachHere.WholeModel $
-                        ap{catchShowErr $ toHTMLModel.CommonMarkText mkModel %noteContent};
-                    htmlRef =
-                        dynamic.WholeModel htmlRefRef;
-                    pure $
-                    vertical [
-                        textEntry $ nameOf !$ ap{note},
-                        grow.Layout $ notebook unknown.WholeModel [
-                            (label ap{"View"},webView.WebKit htmlRef),
-                            (label ap{"Edit"},scrolled $ textView textModel)
-                        ]
-                    ];
+                    ramodel <- run.Interpreter !{this.Context} $ do.Interpreter {
+                        media <- interpret.Scope "import \"media\"";
+                        apply.Scope media $ do.Interpreter {
+                            val <- interpret.Value text;
+                            unify.Value !{this.Scope} @(Action (WholeModel HTMLText)) val;
+                        }
+                    };
+                    amodel <- ramodel;
+                    model <- amodel;
+                    pure model;
                 };
+            htmlRefRef <-
+                runEachHere.WholeModel $
+                ap{catchShowErr $ toHTMLModel.CommonMarkText mkModel %noteContent};
+            htmlRef =
+                dynamic.WholeModel htmlRefRef;
+            copyLinkButton: Widget =
+                button.Widget ap{"Copy Link"} $ ap{clipboard context := anchor.Entity note};
+            editPanel: Widget =
+                vertical [
+                    horizontal [grow.Layout $ textEntry $ nameOf !$ ap{note}, copyLinkButton],
+                    grow.Layout $ scrolled $ textView textModel
+                ];
+            onLinkClicked: URI -> Maybe (Action Unit) =
+                fn uri@Mk.URI => Just $ scheme >- fn {
+                    Just "note" => outputLn.Env path;
+                    _ => launchDefaultForUri.AppInfo.GIO uri;
+                };
+            pure $
+                notebook unknown.WholeModel [
+                    (label ap{"View"}, webView.WebKit {onLinkClicked = onLinkClicked} htmlRef),
+                    (label ap{"Edit"}, editPanel)
+                ];
+        };
+
+    unknownPane: Item -> Pane =
+        stdPane $ fn item => blank.Widget;
+
+    itemPane: Item -> Pane =
+        fn {
+            note :? Note => notePane note;
+            item => unknownPane item;
         };
 
     datatype Column -p {
@@ -92,7 +117,7 @@ let {
                     pure $ listTable.Widget.GTK. columnPairs itemList (fn item => paneWindow.Pane $ itemPane item) mSelectionModel;
                 };
 
-    newNoteCommand: Command (Context.Command *: SetContext Note) =
+    newNoteCommand: Command (Context.Command *: SetContext -Note) =
         Mk.Command {
             name = "New Note";
             defaultKeyBinding = Just "Ctrl+K";
@@ -103,21 +128,23 @@ let {
                 };
         };
 
-    notesPresentation: SetPresentation Note =
+    itemsPresentation: SetPresentation Item =
         Mk.SetPresentation {
-            setName = "Notes";
-            itemSet = all.Note;
-            menuEntries = [newNoteCommand,deleteCommand];
-            itemPane = notePane;
+            setName = "Items";
+            itemSet = all.Item;
+            menuEntries = [newNoteCommand]
+                : List (Command (Context.Command *: SetContext Item));
+            itemPane = itemPane;
             setWidget =
                 Mk.TableSetWidget {
                     order = on.ModelOrder nameOf order.Text;
                     columns = [
                         attributeColumn "Name" nameOf
                     ];
-                    itemSet = all.Note;
-                    itemPane = notePane;
-                };
+                    itemSet = all.Item;
+                    itemPane = itemPane;
+                }
+                : SetWidget Item;
         };
 } run.Context $ fn Mk.Context =>
 imply {
@@ -125,7 +152,7 @@ imply {
     ?undoHandler = undoHandler;
     ?gtk = gtk;
 } do {
-    pane <- present.SetPresentation notesPresentation;
+    pane <- present.SetPresentation itemsPresentation;
     _ <- paneWindow.Pane pane;
     pure ();
 }
