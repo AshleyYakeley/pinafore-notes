@@ -1,5 +1,3 @@
-# https://gvolpe.com/blog/nix-flakes/
-# https://nixos.wiki/wiki/Flakes
 {
   inputs =
     {
@@ -27,12 +25,12 @@
           system = "x86_64-linux";
           config.allowUnfree = true;
         };
-      app = pinafore.apps.x86_64-linux.pinafore.program;
+      pinaforePackage = pinafore.packages.x86_64-linux.pinafore;
       src = ./src;
       package = packages.writeScriptBin "pinafore-notes"
         ''
           #!${packages.stdenv.shell}
-          ${app} -I ${src} ${src}/pinafore-notes
+          ${pinaforePackage}/bin/pinafore1 -I ${src} ${src}/pinafore-notes
         '';
     in
     {
@@ -41,14 +39,9 @@
           type = "app";
           program = "${package}/bin/pinafore-notes";
         };
-      apps.x86_64-linux.pinafore =
-        {
-          type = "app";
-          program = "${app}";
-        };
       packages.x86_64-linux.default = package;
       formatter.x86_64-linux = packages.nixpkgs-fmt;
-      checks.x86_64-linux.interpret = packages.runCommand "check" { } "${app} -I ${src} -n ${src}/pinafore-notes > $out";
+      checks.x86_64-linux.interpret = packages.runCommand "check" { } "${pinaforePackage}/bin/pinafore1 -I ${src} -n ${src}/pinafore-notes > $out";
       devShells.x86_64-linux.default = packages.mkShell { buildInputs = with packages; [ just ]; };
     };
 }
