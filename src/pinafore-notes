@@ -24,7 +24,7 @@ let {
         do {
             noteContent: WholeModel CommonMarkText =
                 debounceUpdates.WholeModel (Seconds 0.2) $
-                content !$ ap{note};
+                content.Note !$ ap{note};
             textModel: TextModel =
                 fromWhole.TextModel $ asText.CommonMarkText !$ noteContent;
             htmlErr: Showable -> HTMLText =
@@ -147,8 +147,10 @@ let {
                 : SetWidget Item;
         };
 } run.Context $ fn Mk.Context =>
+openLocal.Store {path = Just "local/mystore"} >>=
+fn mystore =>
 imply {
-    ?store = store;
+    ?store = mystore; # store;
     ?undoHandler = undoHandler;
     ?gtk = gtk;
 } do {

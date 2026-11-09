@@ -1,17 +1,27 @@
 #!/usr/bin/env pinafore1
 import "media"
 import "notes/Joplin"
+import "notes/Note"
+import "notes/World"
+openLocal.Store {path = Just "local/mystore"} >>=
+fn store =>
+imply {?store = store;}
 do {
+    world := !{hash.OpenEntity @World} "Example JEX import";
     filePath <- index arguments.Env 0 >- fn {
         Just path => pure path;
         Nothing => fail "no path";
     };
-    outputLn.Env filePath;
     objects: List (JoplinId *: JoplinObject) <- readJEX filePath;
     for_ objects $ fn (eid, Mk.JoplinObject headers item) => do {
         push.Sink stdout.Env $ show eid <>.Text ": ";
         item >- fn {
-            Note.JoplinItem parentId body => outputLn.Env $ with Text "note " <> (show $ length body) <> " chars in " <> show parentId;
+            Note.JoplinItem parentId body => do {
+                outputLn.Env $ with Text "note " <> (show $ length body) <> " chars in " <> show parentId;
+                note <- newNote;
+                nameOf.Item !$ ap{note} := show eid;
+                content.Note !$ ap{note} := body;
+            };
             Tag.JoplinItem name => outputLn.Env $ "tag " <>.Text quote.Text name;
             Folder.JoplinItem parentId name => outputLn.Env $ with Text "folder " <> quote name <> " in " <> show parentId;
             NoteTagging.JoplinItem noteId tagId => outputLn.Env $ with Text "note-tagging " <> show noteId <> " " <> show tagId;

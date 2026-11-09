@@ -7,9 +7,8 @@ let {
     namespace Note {
         new: Action Note = map.Action !{coerce @Note} $ new.Item itemtype.Note;
         all: FiniteSetModel Note = !{dynamic.Prism @Note} !$$ all.Item;
+        content = !{property @Note @CommonMarkText !"content.pinafore-notes"} ?store;
     };
-
-    content = !{property @Note @CommonMarkText !"content.pinafore-notes"} ?store;
 
     newNote: Action Note =
         do {

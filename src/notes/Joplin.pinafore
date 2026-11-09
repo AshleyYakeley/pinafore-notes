@@ -3,7 +3,7 @@ let {
     type JoplinId = Blob;
 
     datatype JoplinItem {
-        Note JoplinId Text;
+        Note JoplinId CommonMarkText;
         Tag Text;
         Folder (Maybe JoplinId) Text;
         NoteTagging JoplinId JoplinId;
@@ -48,7 +48,7 @@ let {
                         item <- (lookup.EntityMap "type_" headerMap, mBody) >- fn {
                             (Just "1", Just body) => do {
                                 parentId <- getHeaderJoplinId "parent_id";
-                                pure $ Note.JoplinItem parentId body;
+                                pure $ Note.JoplinItem parentId $ Mk.CommonMarkText body;
                             };
                             (Just "2", Just body) => pure $ Folder.JoplinItem (headerMaybeJoplinId "parent_id") body;
                             (Just "4", Just body) => lookup.EntityMap eid resourceMap >- fn {
