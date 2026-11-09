@@ -14,7 +14,7 @@
           type = "git";
           url = "https://github.com/AshleyYakeley/Truth";
           submodules = true;
-          ref = "master";
+          rev = "6c88f214a7722d53000daaceffc408cedeb9411a";
         };
     };
 
@@ -25,13 +25,39 @@
           system = "x86_64-linux";
           config.allowUnfree = true;
         };
-      pinaforePackage = pinafore.packages.x86_64-linux.pinafore;
+
+      joplinPP =
+        {
+          src = ./joplin;
+          package = "pinafore-lib-joplin";
+          module = "Pinafore.Library.Joplin";
+          name = "joplinPackages";
+        };
+
+      pinaforePackage = pinafore.packages.x86_64-linux.pinafore.withPackages (pp: [ pp.pinafore pp.media pp.gnome pp.script joplinPP ]);
       src = ./src;
-      package = packages.writeScriptBin "pinafore-notes"
-        ''
-          #!${packages.stdenv.shell}
-          ${pinaforePackage}/bin/pinafore1 -I ${src} ${src}/pinafore-notes
-        '';
+
+      package = packages.symlinkJoin {
+        name = "pinafore-notes-package";
+
+        paths = [
+          (packages.writeShellApplication {
+            name = "pinafore-notes";
+            runtimeInputs = [ pinaforePackage ];
+            text = ''
+              pinafore1 -I ${src} ${src}/pinafore-notes "$@"
+            '';
+          })
+
+          (packages.writeShellApplication {
+            name = "import-joplin";
+            runtimeInputs = [ pinaforePackage ];
+            text = ''
+              pinafore1 -I ${src} ${src}/import-joplin "$@"
+            '';
+          })
+        ];
+      };
     in
     {
       apps.x86_64-linux.default =
@@ -39,9 +65,18 @@
           type = "app";
           program = "${package}/bin/pinafore-notes";
         };
+      apps.x86_64-linux.import-joplin =
+        {
+          type = "app";
+          program = "${package}/bin/import-joplin";
+        };
       packages.x86_64-linux.default = package;
       formatter.x86_64-linux = packages.nixpkgs-fmt;
-      checks.x86_64-linux.interpret = packages.runCommand "check" { } "${pinaforePackage}/bin/pinafore1 -I ${src} -n ${src}/pinafore-notes > $out";
+      checks.x86_64-linux =
+        {
+          notes-interpret = packages.runCommand "notes-interpret" { } "${pinaforePackage}/bin/pinafore1 -I ${src} -n ${src}/pinafore-notes > $out";
+          import-interpret = packages.runCommand "import-interpret" { } "${pinaforePackage}/bin/pinafore1 -I ${src} -n ${src}/import-joplin > $out";
+        };
       devShells.x86_64-linux.default = packages.mkShell { buildInputs = with packages; [ just ]; };
     };
 }

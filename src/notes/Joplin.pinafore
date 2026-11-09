@@ -1,0 +1,73 @@
+import "media"
+let {
+    type JoplinId = Blob;
+
+    datatype JoplinItem {
+        Note JoplinId Text;
+        Tag Text;
+        Folder (Maybe JoplinId) Text;
+        NoteTagging JoplinId JoplinId;
+        Resource Text Media;
+    };
+
+    datatype JoplinObject {
+        Mk (List (Text *: Text)) JoplinItem;
+    };
+
+    import "joplin";
+
+    readJEX: Text -> Action (List (JoplinId *: JoplinObject)) =
+        fn filePath => do {
+            entries <- readFile.Joplin filePath;
+            resources: List (JoplinId *: Media) =
+                maybeMap (fn {
+                    (_, Left _) => Nothing;
+                    (eid, Right media) => Just (eid, media)
+                }) entries;
+            resourceMap: EntityMap Media =
+                fromList.EntityMap resources;
+            maybeFor entries $
+                fn (eid, entry) =>
+                entry >-
+                fn {
+                    Left (headers, mBody) => do {
+                        headerMap: EntityMap Text = fromList.EntityMap headers;
+                        headerMaybeJoplinId: Text -> Maybe JoplinId =
+                            fn k =>
+                            do.Maybe {
+                                t <- lookup.EntityMap k headerMap;
+                                decode asHexText.Blob t;
+                            };
+                        getHeaderJoplinId: Text -> Action JoplinId =
+                            fn k =>
+                            headerMaybeJoplinId k >-
+                            fn {
+                                Just jid => pure jid;
+                                Nothing => fail $ "missing JoplinId for " <>.Text k;
+                            };
+                        item <- (lookup.EntityMap "type_" headerMap, mBody) >- fn {
+                            (Just "1", Just body) => do {
+                                parentId <- getHeaderJoplinId "parent_id";
+                                pure $ Note.JoplinItem parentId body;
+                            };
+                            (Just "2", Just body) => pure $ Folder.JoplinItem (headerMaybeJoplinId "parent_id") body;
+                            (Just "4", Just body) => lookup.EntityMap eid resourceMap >- fn {
+                                Just resource => pure $ Resource.JoplinItem body resource;
+                                Nothing => fail "missing resource";
+                            };
+                            (Just "5", Just body) => pure $ Tag.JoplinItem body;
+                            (Just "6", Nothing) => do {
+                                noteId <- getHeaderJoplinId "note_id";
+                                tagId <- getHeaderJoplinId "tag_id";
+                                pure $ NoteTagging.JoplinItem noteId tagId;
+                            };
+                            (Just n,_) => fail $ with Text "unknown type " <> n <> ", body=" <> (show $ inhabited mBody);
+                            (Nothing,_) => fail "missing type";
+                        };
+                        pure $ Just (eid, Mk.JoplinObject headers item);
+                    };
+                    Right _ => pure Nothing;
+                };
+        };
+}
+expose JoplinId, JoplinItem, namespace JoplinItem, JoplinObject, namespace JoplinObject, readJEX
