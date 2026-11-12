@@ -16,11 +16,11 @@ do {
     for_ objects $ fn (eid, Mk.JoplinObject headers item) => do {
         push.Sink stdout.Env $ show eid <>.Text ": ";
         item >- fn {
-            Note.JoplinItem parentId body => do {
-                outputLn.Env $ with Text "note " <> (show $ length body) <> " chars in " <> show parentId;
+            Note.JoplinItem parentId title content => do {
+                outputLn.Env $ with Text "note " <> (show $ length content) <> " chars in " <> show parentId;
                 note <- newNote;
-                nameOf.Item !$ ap{note} := show eid;
-                content.Note !$ ap{note} := body;
+                nameOf.Item !$ ap{note} := title;
+                content.Note !$ ap{note} := content;
             };
             Tag.JoplinItem name => outputLn.Env $ "tag " <>.Text quote.Text name;
             Folder.JoplinItem parentId name => outputLn.Env $ with Text "folder " <> quote name <> " in " <> show parentId;

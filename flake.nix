@@ -14,7 +14,7 @@
           type = "git";
           url = "https://github.com/AshleyYakeley/Truth";
           submodules = true;
-          rev = "6c88f214a7722d53000daaceffc408cedeb9411a";
+          rev = "f6b8825eca9711e71cde19f972c7dab9eb8962b5";
         };
     };
 
